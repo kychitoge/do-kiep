@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ độ kiếp - Vân Thư Quán</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        :root {
+            --font-sans: 'Segoe UI', system-ui, sans-serif;
+            --font-mono: monospace;
+            --color-background-primary: #ffffff;
+            --color-background-secondary: #f8fafc;
+            --color-text-primary: #0f172a;
+            --color-text-secondary: #475569;
+            --color-text-tertiary: #94a3b8;
+            --color-border-primary: #e11d48; /* Crimson */
+            --color-border-secondary: #cbd5e1;
+            --color-border-tertiary: #e2e8f0;
+            --color-btn-hover: #be123c;
+            --color-background-success: #10b981;
+            --color-text-success: #ffffff;
+            --color-background-danger: #ef4444;
+            --color-text-danger: #ffffff;
+            --border-radius-md: 8px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #f1f5f9; display: flex; justify-content: center; padding: 20px; }
+        
+        .wrap { 
+            background: var(--color-background-primary);
+            padding: 2rem; 
+            width: 100%;
+            max-width: 600px; 
+            font-family: var(--font-sans); 
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            border-top: 5px solid var(--color-border-primary);
+        }
+        
+        h2 { font-size: 20px; font-weight: bold; color: var(--color-border-primary); text-align: center; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 1px;}
+        .field { margin-bottom: 1.2rem; }
+        label { display: block; font-size: 14px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 6px; }
+        
+        select, textarea, input[type=text] {
+            width: 100%; padding: 10px 12px; font-size: 14px;
+            font-family: var(--font-mono);
+            background: var(--color-background-primary);
+            color: var(--color-text-primary);
+            border: 1px solid var(--color-border-secondary);
+            border-radius: var(--border-radius-md);
+            transition: border-color 0.2s;
+        }
+        select { font-family: var(--font-sans); cursor: pointer; }
+        select:focus, textarea:focus, input[type=text]:focus { outline: none; border-color: var(--color-border-primary); box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.1); }
+        textarea { resize: vertical; line-height: 1.5; }
+        
+        button {
+            width: 100%; padding: 12px; font-size: 16px; font-weight: bold;
+            background: var(--color-border-primary);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius-md);
+            cursor: pointer; margin-top: 8px;
+            transition: all 0.2s;
+        }
+        button:hover { background: var(--color-btn-hover); }
+        button:active { transform: scale(0.98); }
+        
+        .result-wrap { margin-top: 1.5rem; }
+        .result-box { background: var(--color-background-secondary); border: 1px solid var(--color-border-tertiary); }
+        
+        .badge { display: inline-block; font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; }
+        .badge-ok { background: var(--color-background-success); color: var(--color-text-success); }
+        .badge-err { background: var(--color-background-danger); color: var(--color-text-danger); }
+        .hint { font-size: 12px; color: var(--color-text-secondary); margin-top: 6px; }
+    </style>
+</head>
+<body>
+
+<div class="wrap">
+    <h2>Công cụ độ kiếp</h2>
+
+    <div class="field">
+        <label>Dạng kiếp nạn</label>
+        <select id="mode" onchange="onModeChange()">
+            <option value="1">Dạng 1 — Hex thuần (Không Key)</option>
+            <option value="2" selected>Dạng 2 — AES Chuẩn (Base64/Hex + PKCS7)</option>
+            <option value="3">Dạng 3 — AES Dị (Hex/Base64 + Zero Padding)</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label>Chuỗi dữ liệu cần giải (Lối vào)</label>
+        <textarea id="inputData" rows="4" placeholder="Dán mã Hex hoặc Base64 vào đây..."></textarea>
+    </div>
+
+    <div id="keyGroup" class="field">
+        <label id="keyLabel">Key (Chìa khóa)</label>
+        <input type="text" id="keyInput" placeholder="Nhập key vào đây..." />
+        <p class="hint" id="keyHint">Hỗ trợ Passphrase thường. Tool tự giải mã nếu Key bị bọc bởi Base64/Hex.</p>
+    </div>
+
+    <button onclick="giaiMa()">⚡ Thực thi phá trận</button>
+
+    <div class="result-wrap" id="resultWrap" style="display:none;">
+        <div id="badge"></div>
+        <textarea id="resultOutput" class="result-box" rows="5" readonly placeholder="Sinh lộ hiển thị ở đây..."></textarea>
+    </div>
+</div>
+
+<script>
+    // Gọi hàm đổi UI ngay khi tải trang
+    window.onload = function() { onModeChange(); };
+
+    function onModeChange() {
+        const mode = document.getElementById('mode').value;
+        const keyGroup = document.getElementById('keyGroup');
+        const keyLabel = document.getElementById('keyLabel');
+        const keyHint = document.getElementById('keyHint');
+
+        if (mode === '1') {
+            keyGroup.style.display = 'none';
+        } else if (mode === '2') {
+            keyGroup.style.display = 'block';
+            keyLabel.textContent = 'Key Passphrase (Dùng đệm PKCS7)';
+            keyHint.textContent = 'Chuẩn y hệt it-tools.tech. Nếu key bị bọc Base64/Hex, tool sẽ tự gỡ.';
+        } else {
+            keyGroup.style.display = 'block';
+            keyLabel.textContent = 'Key Passphrase (Dùng đệm Zero Padding)';
+            keyHint.textContent = 'Dành cho dạng Hex dị. Tự sinh EvpKDF MD5.';
+        }
+    }
+
+    function isHex(s) { return /^[0-9A-Fa-f]+$/i.test(s); }
+    
+    function isBase64(s) {
+        // Kiểm tra xem chuỗi có đúng format Base64 không (và độ dài chia hết cho 4)
+        if (s.length % 4 !== 0 || /[^A-Za-z0-9+/=]/.test(s)) return false;
+        try { return btoa(atob(s)) === s; } catch (err) { return false; }
+    }
+
+    // Hàm tự động gỡ rối Key nếu nó bị mã hóa Base64 hoặc Hex
+    function autoDecodeKey(rawKey) {
+        if (!rawKey) return rawKey;
+        try {
+            if (isHex(rawKey)) {
+                const hexDecoded = CryptoJS.enc.Hex.parse(rawKey).toString(CryptoJS.enc.Utf8);
+                if (hexDecoded) return hexDecoded;
+            }
+            if (isBase64(rawKey)) {
+                const b64Decoded = CryptoJS.enc.Base64.parse(rawKey).toString(CryptoJS.enc.Utf8);
+                if (b64Decoded) return b64Decoded;
+            }
+        } catch (e) {
+            // Nếu lỗi decode thì cứ xài key gốc
+        }
+        return rawKey; // Không phải Hex hay Base64 thì trả về nguyên bản
+    }
+
+    function showResult(text, isErr) {
+        const wrap = document.getElementById('resultWrap');
+        const badge = document.getElementById('badge');
+        const box = document.getElementById('resultOutput');
+        wrap.style.display = 'block';
+        badge.innerHTML = isErr
+            ? '<span class="badge badge-err">Thất bại</span>'
+            : '<span class="badge badge-ok">Thành công</span>';
+        box.value = text;
+    }
+
+    function giaiMa() {
+        const mode = document.getElementById('mode').value;
+        const rawInput = document.getElementById('inputData').value.trim().replace(/\s+/g, '');
+        const rawKey = document.getElementById('keyInput').value.trim();
+
+        if (!rawInput) { showResult('[!] Vui lòng nhập dữ liệu lối vào.', true); return; }
+
+        try {
+            // DẠNG 1: HEX THUẦN
+            if (mode === '1') {
+                if (!isHex(rawInput)) throw new Error('Không phải chuỗi hex hợp lệ.');
+                const text = CryptoJS.enc.Hex.parse(rawInput).toString(CryptoJS.enc.Utf8);
+                if (!text) throw new Error('Không dịch được sang UTF-8 — có thể không phải văn bản.');
+                showResult(text, false);
+                return;
+            }
+
+            // DẠNG 2 VÀ 3: CÓ KEY
+            if (!rawKey) { showResult('[!] Vui lòng nhập Key.', true); return; }
+
+            // Bước 1: Tự động dịch Key (Nếu Key đang là Base64 hoặc Hex)
+            const finalKey = autoDecodeKey(rawKey);
+
+            // Bước 2: Tự động ép Lối Vào sang Base64 để CryptoJS xử lý mượt
+            let processInput = rawInput;
+            if (isHex(rawInput)) {
+                processInput = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Hex.parse(rawInput));
+            }
+
+            // Bước 3: Giải mã
+            let decrypted;
+            if (mode === '2') {
+                // Dạng 2: Chuẩn it-tools (AES mặc định PKCS7)
+                decrypted = CryptoJS.AES.decrypt(processInput, finalKey);
+            } else {
+                // Dạng 3: AES Dị (Zero Padding)
+                decrypted = CryptoJS.AES.decrypt(processInput, finalKey, {
+                    padding: CryptoJS.pad.ZeroPadding
+                });
+            }
+
+            const text = decrypted.toString(CryptoJS.enc.Utf8);
+            if (!text) {
+                let errMsg = 'Sai Key hoặc sai định dạng.';
+                if (finalKey !== rawKey) errMsg += ` (Tool đã thử dịch Key ngầm thành: "${finalKey}" nhưng vẫn tạch)`;
+                throw new Error(errMsg);
+            }
+            
+            showResult(text, false);
+            
+        } catch (e) {
+            showResult('[!] Lỗi: ' + e.message, true);
+        }
+    }
+</script>
+
+</body>
+</html>
