@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Độ Kiếp Trận — Vân Thư Quán</title>
+<title>Độ Kiếp Trận — Vân Du Chí</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <style>
 /* ===== CSS VARIABLES ===== */
@@ -77,7 +77,7 @@ body {
   margin-bottom: 6px;
   margin-top: 18px;
 }
-textarea, input[type="text"] {
+textarea, input[type="text"], input[type="password"] {
   width: 100%;
   padding: 13px 15px;
   border-radius: var(--radius-input);
@@ -96,8 +96,63 @@ textarea {
   font-size: 13px;
   line-height: 1.6;
 }
-textarea:focus, input[type="text"]:focus {
+textarea:focus, input[type="text"]:focus, input[type="password"]:focus {
   border-color: var(--accent-color);
+}
+
+/* ===== KEY FIELD + TOGGLE ===== */
+.key-field-wrap {
+  position: relative;
+}
+.key-field-wrap input {
+  padding-right: 44px;
+}
+.key-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.key-toggle:hover {
+  background: #f3f4f6;
+  color: var(--text-main);
+}
+
+/* ===== FORM NOTICE ===== */
+.form-notice {
+  margin-top: 12px;
+  padding: 11px 14px;
+  border-radius: var(--radius-input);
+  border: 1.5px solid #fca5a5;
+  background: #fff5f5;
+  color: var(--badge-low);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.form-notice:empty { display: none !important; }
+
+.card-hint {
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+.card-hint strong {
+  color: var(--text-main);
+  font-weight: 600;
 }
 
 /* ===== ADVANCED PANEL ===== */
@@ -301,7 +356,10 @@ textarea:focus, input[type="text"]:focus {
   <textarea id="inputData" placeholder="Dán chuỗi Base64, Hex, URL-encoded, AES ciphertext…" oninput="App.onInputChange()"></textarea>
 
   <label class="field-label" for="keyInput">Khoá (để trống nếu không có)</label>
-  <input type="text" id="keyInput" placeholder="Nhập key nếu cần giải mã AES…">
+  <div class="key-field-wrap">
+    <input type="password" id="keyInput" placeholder="Nhập key nếu cần giải mã AES…" autocomplete="off">
+    <button type="button" class="key-toggle" id="keyToggle" onclick="App.toggleKeyVisibility()" aria-label="Hiện mật khẩu" title="Hiện/ẩn mật khẩu">👁</button>
+  </div>
 
   <div class="advanced-toggle" id="advToggle" onclick="App.toggleAdvanced()">
     <i class="chevron">▶</i> Tuỳ chọn nâng cao
@@ -309,6 +367,8 @@ textarea:focus, input[type="text"]:focus {
   <div class="advanced-panel" id="advancedPanel">
     Mục này bảo lưu cho cấu hình Salt / IV / Hash function đặc thù — sẽ được mở ở các giai đoạn phát triển tiếp theo (P1/P2).
   </div>
+
+  <div id="formNotice" class="form-notice" role="alert" style="display:none"></div>
 
   <button class="btn-block" id="btnGiaiMa" onclick="App.giaiMa()">
     <span class="spinner" id="spinner"></span>
@@ -336,18 +396,43 @@ const Utils = {
     try { return btoa(atob(s)) === s; } catch { return false; }
   },
 
+  looksLikeOpenSSLSalted(raw) {
+    if (!raw) return false;
+    if (raw.startsWith('U2FsdGVkX1')) return true;
+    if (this.isHex(raw) && raw.length >= 16) {
+      try {
+        const b64 = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Hex.parse(raw));
+        return b64.startsWith('U2FsdGVkX1');
+      } catch (e) { return false; }
+    }
+    return false;
+  },
+
+  isMostlyPrintableAscii(str) {
+    if (!str) return false;
+    let ok = 0;
+    for (let i = 0; i < str.length; i++) {
+      const c = str.charCodeAt(i);
+      if (c >= 32 && c <= 126) ok++;
+    }
+    return ok / str.length >= 0.85;
+  },
+
   autoDecodeKey(rawKey) {
     if (!rawKey) return rawKey;
     try {
-      if (this.isHex(rawKey)) {
+      if (this.isHex(rawKey) && rawKey.length % 2 === 0) {
+        // Giữ nguyên hex key AES 128/192/256-bit — tryAllAES có nhánh hex riêng
+        if ([32, 48, 64].includes(rawKey.length)) return rawKey;
+
         const words = CryptoJS.enc.Hex.parse(rawKey);
         const t = CryptoJS.enc.Utf8.stringify(words);
-        if (t && words.sigBytes > 0) return t;
+        if (t && words.sigBytes > 0 && this.isMostlyPrintableAscii(t)) return t;
       }
       if (this.isBase64(rawKey)) {
         const words = CryptoJS.enc.Base64.parse(rawKey);
         const t = CryptoJS.enc.Utf8.stringify(words);
-        if (t && words.sigBytes > 0) return t;
+        if (t && words.sigBytes > 0 && this.isMostlyPrintableAscii(t)) return t;
       }
     } catch (e) { }
     return rawKey;
@@ -466,8 +551,55 @@ const Decoder = {
    AES ENGINE
    ========================================================= */
 const AES_ENGINE = {
+  ZERO_IV: CryptoJS.enc.Hex.parse('00000000000000000000000000000000'),
+
+  toWordArray(inputData) {
+    if (inputData && inputData.words) return inputData;
+    if (typeof inputData !== 'string') return null;
+    if (Utils.isHex(inputData)) return CryptoJS.enc.Hex.parse(inputData);
+    try { return CryptoJS.enc.Base64.parse(inputData); } catch (e) { return null; }
+  },
+
+  splitPrependedIV(inputData) {
+    const wa = this.toWordArray(inputData);
+    if (!wa || wa.sigBytes <= 16) return null;
+    const hex = CryptoJS.enc.Hex.stringify(wa);
+    return {
+      iv:         CryptoJS.enc.Hex.parse(hex.slice(0, 32)),
+      ciphertext: CryptoJS.enc.Base64.stringify(CryptoJS.enc.Hex.parse(hex.slice(32)))
+    };
+  },
+
+  decryptedToText(decrypted, paddingName) {
+    if (paddingName === 'ZeroPadding') {
+      const latin = decrypted.toString(CryptoJS.enc.Latin1);
+      const clean = latin.replace(/\x00+$/, '');
+      return CryptoJS.enc.Utf8.stringify(CryptoJS.enc.Latin1.parse(clean));
+    }
+    return decrypted.toString(CryptoJS.enc.Utf8);
+  },
+
+  pushResult(results, decrypted, paddingName, modeName, keyName, ivStrategy) {
+    const text = this.decryptedToText(decrypted, paddingName);
+    const meta = ivStrategy
+      ? `Padding: ${paddingName}, Key: ${keyName}, IV: ${ivStrategy}`
+      : `Padding: ${paddingName}, Key: ${keyName}`;
+    results.push({
+      success:    decrypted.sigBytes > 0 && !!text,
+      resultText: text,
+      method:     `AES-${modeName}`,
+      metadata:   meta
+    });
+  },
+
+  tryDecrypt(inputData, key, mode, padding, iv) {
+    const opts = { mode, padding };
+    if (iv) opts.iv = iv;
+    return CryptoJS.AES.decrypt(inputData, key, opts);
+  },
+
   tryAllAES(inputData, rawKey) {
-    if (!rawKey) return [];
+    if (rawKey === null || rawKey === undefined) return [];
 
     const modes = [
       { name: 'CBC', value: CryptoJS.mode.CBC },
@@ -486,35 +618,33 @@ const AES_ENGINE = {
     }
 
     const results = [];
+    const prepended = this.splitPrependedIV(inputData);
 
     for (const kf of keyFormats) {
       for (const m of modes) {
         for (const p of paddings) {
-          try {
-            // SỬA FIX CHÍ MẠNG: Để thô chuỗi / WordArray và để CryptoJS tự xử lý khởi tạo CipherParams
-            const decrypted = CryptoJS.AES.decrypt(
-              inputData,
-              kf.getKey(),
-              { mode: m.value, padding: p.value }
-            );
+          const attempts = [{ input: inputData, iv: null, ivStrategy: null }];
 
-            let text = '';
-            if (p.name === 'ZeroPadding') {
-              const latin = decrypted.toString(CryptoJS.enc.Latin1);
-              const clean = latin.replace(/\x00+$/, '');
-              text = CryptoJS.enc.Utf8.stringify(CryptoJS.enc.Latin1.parse(clean));
-            } else {
-              text = decrypted.toString(CryptoJS.enc.Utf8);
+          if (m.name === 'CBC' && (kf.name === 'utf8' || kf.name === 'hex')) {
+            attempts.push({ input: inputData, iv: this.ZERO_IV, ivStrategy: 'zero' });
+            if (prepended) {
+              attempts.push({
+                input:      prepended.ciphertext,
+                iv:         prepended.iv,
+                ivStrategy: 'prepended'
+              });
             }
+          }
 
-            results.push({
-              success:    decrypted.sigBytes > 0 && !!text,
-              resultText: text,
-              method:     `AES-${m.name}`,
-              metadata:   `Padding: ${p.name}, Key: ${kf.name}`
-            });
-          } catch (e) {
-            results.push({ success: false });
+          for (const att of attempts) {
+            try {
+              const decrypted = this.tryDecrypt(
+                att.input, kf.getKey(), m.value, p.value, att.iv
+              );
+              this.pushResult(results, decrypted, p.name, m.name, kf.name, att.ivStrategy);
+            } catch (e) {
+              results.push({ success: false });
+            }
           }
         }
       }
@@ -538,18 +668,6 @@ const ResultRanker = {
     return count / str.length;
   },
 
-  // TÍNH TOÁN THÊM TRỌNG SỐ ĐỂ ĐẨY ROT ĐÚNG LÊN ĐẦU (Sửa lỗi TC-006)
-  getLanguageScore(str) {
-    if (!str) return 0;
-    // Điểm thưởng nếu chuỗi chứa các cụm từ/từ vựng có nghĩa cơ bản trong lập trình hoặc tiếng Anh/Việt thông dụng
-    const patterns = /[aeiouy ]/i; 
-    let matches = 0;
-    for(let i=0; i<str.length; i++) {
-      if(patterns.test(str[i])) matches++;
-    }
-    return (matches / str.length) * 15; 
-  },
-
   isJSON(str) {
     if (!str || str.length < 2) return false;
     try {
@@ -568,9 +686,6 @@ const ResultRanker = {
 
       let score = printable * 100;
       if (validJSON) score += 200;
-      
-      // Thêm điểm thưởng ngôn ngữ để phân tách các kết quả ROT rác
-      score += this.getLanguageScore(text);
 
       let confidence = 'thấp';
       if (validJSON || (printable > 0.95 && score > 90)) confidence = 'cao';
@@ -594,6 +709,78 @@ const ResultRanker = {
 };
 
 /* =========================================================
+   RESULT FEEDBACK (TICKET-013)
+   ========================================================= */
+const ResultFeedback = {
+  detectHash(raw) {
+    if (!Utils.isHex(raw)) return null;
+    const map = { 32: 'MD5', 40: 'SHA1', 64: 'SHA256', 128: 'SHA512' };
+    return map[raw.length] || null;
+  },
+
+  diagnose(rawInput, rawKey) {
+    const raw = (rawInput || '').trim().replace(/\s+/g, '');
+    const key = (rawKey || '').trim();
+
+    if (!raw) {
+      return {
+        type: 'empty_input',
+        title: 'Chưa có dữ liệu',
+        message: 'Ô dữ liệu đang trống.',
+        hint: 'Dán chuỗi cần giải vào ô phía trên rồi bấm Giải mã.'
+      };
+    }
+
+    const hashType = this.detectHash(raw);
+    if (hashType) {
+      return {
+        type: 'likely_hash',
+        title: 'Có thể là hash một chiều',
+        message: `Chuỗi Hex ${raw.length} ký tự khớp độ dài ${hashType}. Hash không thể giải ngược.`,
+        hint: 'Nếu cần đối chiếu, hãy hash dữ liệu gốc bằng cùng thuật toán rồi so sánh.'
+      };
+    }
+
+    const detected = Detector.detectFormat(raw);
+    const looksEncrypted = Utils.looksLikeOpenSSLSalted(raw);
+
+    if (!key && looksEncrypted) {
+      return {
+        type: 'need_key',
+        title: 'Có thể cần mật khẩu / key',
+        message: 'Dữ liệu trông giống ciphertext AES (định dạng OpenSSL Salted__).',
+        hint: 'Nhập key vào ô Khoá rồi bấm Giải mã lại.'
+      };
+    }
+
+    if (key && (looksEncrypted || detected.length > 0)) {
+      return {
+        type: 'wrong_key',
+        title: 'Không giải được với key hiện tại',
+        message: 'Đã thử nhiều tổ hợp AES nhưng không có kết quả đọc được.',
+        hint: 'Kiểm tra lại key. Nếu chỉ là Base64/Hex thường, thử xóa key và giải lại.'
+      };
+    }
+
+    if (detected.length === 0) {
+      return {
+        type: 'unknown_format',
+        title: 'Không nhận diện được định dạng',
+        message: 'Chuỗi không khớp Hex, Base64 hay Base64URL hợp lệ.',
+        hint: 'Kiểm tra copy/paste, bỏ khoảng trắng hoặc ký tự thừa ở đầu/cuối.'
+      };
+    }
+
+    return {
+      type: 'no_result',
+      title: 'Không tìm được kết quả',
+      message: 'Không có kết quả nào đủ tin cậy để hiển thị.',
+      hint: 'Thử key khác hoặc kiểm tra nguồn dữ liệu.'
+    };
+  }
+};
+
+/* =========================================================
    UI RENDERER
    ========================================================= */
 const UI = {
@@ -606,7 +793,26 @@ const UI = {
       .replace(/'/g,  '&#039;');
   },
 
-  renderCards(ranked) {
+  renderEmptyCard(feedback) {
+    const fb = feedback || {
+      title: 'Không tìm được kết quả',
+      message: 'Không có kết quả khả dĩ.',
+      hint: 'Thử kiểm tra lại key hoặc định dạng input.'
+    };
+    return `
+      <div class="result-card card-error">
+        <div class="card-header">
+          <div class="card-meta">
+            <span class="card-method" style="color:var(--badge-low)">${this.escapeHtml(fb.title)}</span>
+          </div>
+          <span class="badge badge-low">Lỗi</span>
+        </div>
+        <div class="output-text">${this.escapeHtml(fb.message)}</div>
+        <p class="card-hint"><strong>Gợi ý:</strong> ${this.escapeHtml(fb.hint)}</p>
+      </div>`;
+  },
+
+  renderCards(ranked, context) {
     const container = document.getElementById('cardsContainer');
     const wrap      = document.getElementById('resultWrap');
     const title     = document.getElementById('resultTitle');
@@ -615,16 +821,11 @@ const UI = {
 
     if (ranked.length === 0) {
       title.innerHTML = 'Kết quả';
-      container.innerHTML = `
-        <div class="result-card card-error">
-          <div class="card-header">
-            <div class="card-meta">
-              <span class="card-method" style="color:var(--badge-low)">Không tìm được kết quả</span>
-            </div>
-            <span class="badge badge-low">Lỗi</span>
-          </div>
-          <div class="output-text">Không tìm được kết quả khả dĩ — thử kiểm tra lại key hoặc định dạng input.</div>
-        </div>`;
+      const feedback = ResultFeedback.diagnose(
+        context ? context.raw : '',
+        context ? context.key : ''
+      );
+      container.innerHTML = this.renderEmptyCard(feedback);
       return;
     }
 
@@ -659,6 +860,16 @@ const UI = {
     document.getElementById('cardsContainer').innerHTML = '';
   },
 
+  showFormNotice(message) {
+    const el = document.getElementById('formNotice');
+    el.textContent = message;
+    el.style.display = message ? 'block' : 'none';
+  },
+
+  clearFormNotice() {
+    this.showFormNotice('');
+  },
+
   setLoading(on) {
     const btn     = document.getElementById('btnGiaiMa');
     const spinner = document.getElementById('spinner');
@@ -684,6 +895,14 @@ const Core = {
 
     if (!key) {
       rawResults = Decoder.runNoKey(raw, detected);
+      if (Utils.looksLikeOpenSSLSalted(raw)) {
+        rawResults.push(...AES_ENGINE.tryAllAES(raw, ''));
+        if (Utils.isHex(raw)) {
+          const hexWA = CryptoJS.enc.Hex.parse(raw);
+          rawResults.push(...AES_ENGINE.tryAllAES(hexWA, ''));
+          rawResults.push(...AES_ENGINE.tryAllAES(CryptoJS.enc.Base64.stringify(hexWA), ''));
+        }
+      }
     } else {
       const finalKey = Utils.autoDecodeKey(key);
 
@@ -709,6 +928,18 @@ const Core = {
    APP
    ========================================================= */
 const App = {
+  keyVisible: false,
+
+  toggleKeyVisibility() {
+    const input  = document.getElementById('keyInput');
+    const toggle = document.getElementById('keyToggle');
+    this.keyVisible = !this.keyVisible;
+    input.type = this.keyVisible ? 'text' : 'password';
+    toggle.textContent = this.keyVisible ? '🙈' : '👁';
+    toggle.setAttribute('aria-label', this.keyVisible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+    input.focus();
+  },
+
   toggleAdvanced() {
     const panel = document.getElementById('advancedPanel');
     const toggle = document.getElementById('advToggle');
@@ -740,19 +971,21 @@ const App = {
     const key = document.getElementById('keyInput').value;
 
     if (!raw.trim()) {
-      alert('Vui lòng nhập dữ liệu đầu vào!');
+      UI.showFormNotice('Vui lòng nhập dữ liệu vào ô phía trên trước khi giải mã.');
+      UI.hide();
       return;
     }
+    UI.clearFormNotice();
 
     UI.setLoading(true);
 
     setTimeout(() => {
       try {
         const ranked = Core.process(raw, key);
-        UI.renderCards(ranked);
+        UI.renderCards(ranked, { raw, key });
       } catch (err) {
         console.error('[DoKiepTran] Lỗi không mong đợi:', err);
-        UI.renderCards([]);
+        UI.renderCards([], { raw, key });
       } finally {
         UI.setLoading(false);
       }
