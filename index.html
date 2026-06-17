@@ -1,331 +1,768 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công cụ độ kiếp - Vân Thư Quán</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <style>
-        :root {
-            --font-sans: 'Segoe UI', system-ui, sans-serif;
-            --font-mono: monospace;
-            --color-background-primary: #ffffff;
-            --color-background-secondary: #f8fafc;
-            --color-text-primary: #0f172a;
-            --color-text-secondary: #475569;
-            --color-text-tertiary: #94a3b8;
-            --color-border-primary: #e11d48;
-            /* Crimson */
-            --color-border-secondary: #cbd5e1;
-            --color-border-tertiary: #e2e8f0;
-            --color-btn-hover: #be123c;
-            --color-background-success: #10b981;
-            --color-text-success: #ffffff;
-            --color-background-danger: #ef4444;
-            --color-text-danger: #ffffff;
-            --border-radius-md: 8px;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Độ Kiếp Trận — Vân Thư Quán</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<style>
+/* ===== CSS VARIABLES ===== */
+:root {
+  --bg-light:      #f4f9f5;
+  --panel-bg:      #ffffff;
+  --accent-color:  #e62233;
+  --accent-hover:  #c81726;
+  --text-main:     #1a2e22;
+  --text-muted:    #647a6f;
+  --border-color:  #cce3d5;
+  --input-bg:      #ffffff;
+  --shadow:        0 10px 30px -5px rgba(255,77,109,.08), 0 4px 12px -5px rgba(26,46,34,.04);
+  --badge-high:    #059669;
+  --badge-medium:  #d97706;
+  --badge-low:     #dc2626;
+  --radius-card:   16px;
+  --radius-input:  12px;
+  --radius-btn:    12px;
+}
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg-light);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 32px 16px;
+  color: var(--text-main);
+}
 
-        body {
-            background: #f1f5f9;
-            display: flex;
-            justify-content: center;
-            padding: 20px;
-        }
+/* ===== LAYOUT ===== */
+.wrap {
+  width: 100%;
+  max-width: 600px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 22px;
+  padding: 36px 36px 40px;
+  box-shadow: var(--shadow);
+}
 
-        .wrap {
-            background: var(--color-background-primary);
-            padding: 2rem;
-            width: 100%;
-            max-width: 600px;
-            font-family: var(--font-sans);
-            border-radius: 12px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-            border-top: 5px solid var(--color-border-primary);
-        }
+/* ===== HEADER ===== */
+.app-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.app-header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--text-main);
+}
+.app-header p {
+  margin-top: 5px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
 
-        h2 {
-            font-size: 20px;
-            font-weight: bold;
-            color: var(--color-border-primary);
-            text-align: center;
-            margin-bottom: 1.5rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+/* ===== FORM FIELDS ===== */
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  margin-top: 18px;
+}
+textarea, input[type="text"] {
+  width: 100%;
+  padding: 13px 15px;
+  border-radius: var(--radius-input);
+  border: 1.5px solid var(--border-color);
+  font-size: 14.5px;
+  background: var(--input-bg);
+  color: var(--text-main);
+  transition: border-color 0.15s;
+  outline: none;
+  font-family: inherit;
+}
+textarea {
+  min-height: 120px;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+textarea:focus, input[type="text"]:focus {
+  border-color: var(--accent-color);
+}
 
-        .field {
-            margin-bottom: 1.2rem;
-        }
+/* ===== ADVANCED PANEL ===== */
+.advanced-toggle {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--accent-color);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+  user-select: none;
+  transition: opacity 0.15s;
+}
+.advanced-toggle:hover { opacity: 0.75; }
+.advanced-toggle .chevron {
+  display: inline-block;
+  transition: transform 0.2s;
+  font-style: normal;
+}
+.advanced-toggle.open .chevron { transform: rotate(90deg); }
+.advanced-panel {
+  display: none;
+  margin-top: 10px;
+  padding: 14px 16px;
+  border: 1.5px dashed var(--border-color);
+  border-radius: var(--radius-input);
+  background: #fafcfb;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
 
-        label {
-            display: block;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--color-text-primary);
-            margin-bottom: 6px;
-        }
+/* ===== ACTION BUTTON ===== */
+.btn-block {
+  width: 100%;
+  margin-top: 22px;
+  padding: 14px;
+  border-radius: var(--radius-btn);
+  background: var(--accent-color);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 15.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  transition: background 0.18s, transform 0.1s;
+}
+.btn-block:hover  { background: var(--accent-hover); }
+.btn-block:active { transform: scale(0.985); }
+.btn-block:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
 
-        select,
-        textarea,
-        input[type=text] {
-            width: 100%;
-            padding: 10px 12px;
-            font-size: 14px;
-            font-family: var(--font-mono);
-            background: var(--color-background-primary);
-            color: var(--color-text-primary);
-            border: 1px solid var(--color-border-secondary);
-            border-radius: var(--border-radius-md);
-            transition: border-color 0.2s;
-        }
+/* ===== SPINNER ===== */
+.spinner {
+  display: none;
+  width: 16px; height: 16px;
+  border: 2.5px solid rgba(255,255,255,0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-        select {
-            font-family: var(--font-sans);
-            cursor: pointer;
-        }
+/* ===== RESULTS AREA ===== */
+.result-wrap {
+  margin-top: 30px;
+  border-top: 1.5px solid var(--border-color);
+  padding-top: 24px;
+  display: none;
+}
+.result-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+.result-count {
+  font-weight: 700;
+  color: var(--text-main);
+}
 
-        select:focus,
-        textarea:focus,
-        input[type=text]:focus {
-            outline: none;
-            border-color: var(--color-border-primary);
-            box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.1);
-        }
+/* ===== RESULT CARD ===== */
+.result-card {
+  background: #f9fafb;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-card);
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  transition: box-shadow 0.15s;
+}
+.result-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.result-card.card-error {
+  border-color: #fca5a5;
+  background: #fff5f5;
+}
 
-        textarea {
-            resize: vertical;
-            line-height: 1.5;
-        }
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 11px;
+}
+.card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.card-method {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.card-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+}
 
-        button {
-            width: 100%;
-            padding: 12px;
-            font-size: 16px;
-            font-weight: bold;
-            background: var(--color-border-primary);
-            color: white;
-            border: none;
-            border-radius: var(--border-radius-md);
-            cursor: pointer;
-            margin-top: 8px;
-            transition: all 0.2s;
-        }
+.badge {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #fff;
+  white-space: nowrap;
+}
+.badge-high   { background: var(--badge-high); }
+.badge-medium { background: var(--badge-medium); }
+.badge-low    { background: var(--badge-low); }
 
-        button:hover {
-            background: var(--color-btn-hover);
-        }
+.output-text {
+  width: 100%;
+  min-height: 60px;
+  max-height: 220px;
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  color: #059669;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.55;
+}
+.card-error .output-text {
+  color: var(--badge-low);
+  background: #fff5f5;
+  border-color: #fca5a5;
+}
 
-        button:active {
-            transform: scale(0.98);
-        }
+.btn-copy {
+  margin-top: 10px;
+  padding: 6px 14px;
+  background: #f3f4f6;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.btn-copy:hover { background: #e5e7eb; }
+.btn-copy.copied {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+  color: #065f46;
+}
 
-        .result-wrap {
-            margin-top: 1.5rem;
-        }
-
-        .result-box {
-            background: var(--color-background-secondary);
-            border: 1px solid var(--color-border-tertiary);
-        }
-
-        .badge {
-            display: inline-block;
-            font-size: 12px;
-            font-weight: bold;
-            padding: 4px 10px;
-            border-radius: 6px;
-            margin-bottom: 10px;
-        }
-
-        .badge-ok {
-            background: var(--color-background-success);
-            color: var(--color-text-success);
-        }
-
-        .badge-err {
-            background: var(--color-background-danger);
-            color: var(--color-text-danger);
-        }
-
-        .hint {
-            font-size: 12px;
-            color: var(--color-text-secondary);
-            margin-top: 6px;
-        }
-    </style>
+/* ===== RESPONSIVE ===== */
+@media (max-width: 480px) {
+  .wrap { padding: 24px 20px 28px; border-radius: 16px; }
+  .app-header h1 { font-size: 19px; }
+}
+</style>
 </head>
 
 <body>
+<div class="wrap">
 
-    <div class="wrap">
-        <h2>Công cụ độ kiếp</h2>
+  <div class="app-header">
+    <h1>⚡ Độ Kiếp Trận</h1>
+    <p>Tự nhận diện định dạng &amp; thử giải — không cần chọn mode thủ công</p>
+  </div>
 
-        <div class="field">
-            <label>Dạng kiếp nạn</label>
-            <select id="mode" onchange="onModeChange()">
-                <option value="1">Dạng 1 — Hex thuần (Không Key)</option>
-                <option value="2" selected>Dạng 2 — AES Chuẩn (Base64/Hex + PKCS7)</option>
-                <option value="3">Dạng 3 — AES Dị (Hex/Base64 + Zero Padding)</option>
-                <option value="4">Dạng 4 — AES CBC 256bits PKCS#7 (Key trống / OpenSSL)</option>
-            </select>
-        </div>
+  <label class="field-label" for="inputData">Dữ liệu cần giải</label>
+  <textarea id="inputData" placeholder="Dán chuỗi Base64, Hex, URL-encoded, AES ciphertext…" oninput="App.onInputChange()"></textarea>
 
-        <div class="field">
-            <label>Chuỗi dữ liệu cần giải (Lối vào)</label>
-            <textarea id="inputData" rows="4" placeholder="Dán mã Hex hoặc Base64 vào đây..."></textarea>
-        </div>
+  <label class="field-label" for="keyInput">Khoá (để trống nếu không có)</label>
+  <input type="text" id="keyInput" placeholder="Nhập key nếu cần giải mã AES…">
 
-        <div id="keyGroup" class="field">
-            <label id="keyLabel">Key (Chìa khóa)</label>
-            <input type="text" id="keyInput" placeholder="Nhập key vào đây..." />
-            <p class="hint" id="keyHint">Hỗ trợ Passphrase thường. Tool tự giải mã nếu Key bị bọc bởi Base64/Hex.</p>
-        </div>
+  <div class="advanced-toggle" id="advToggle" onclick="App.toggleAdvanced()">
+    <i class="chevron">▶</i> Tuỳ chọn nâng cao
+  </div>
+  <div class="advanced-panel" id="advancedPanel">
+    Mục này bảo lưu cho cấu hình Salt / IV / Hash function đặc thù — sẽ được mở ở các giai đoạn phát triển tiếp theo (P1/P2).
+  </div>
 
-        <button onclick="giaiMa()">⚡ Thực thi phá trận</button>
+  <button class="btn-block" id="btnGiaiMa" onclick="App.giaiMa()">
+    <span class="spinner" id="spinner"></span>
+    <span id="btnLabel">Giải mã</span>
+  </button>
 
-        <div class="result-wrap" id="resultWrap" style="display:none;">
-            <div id="badge"></div>
-            <textarea id="resultOutput" class="result-box" rows="5" readonly
-                placeholder="Sinh lộ hiển thị ở đây..."></textarea>
-        </div>
-    </div>
+  <div class="result-wrap" id="resultWrap">
+    <div class="result-title" id="resultTitle">Kết quả</div>
+    <div id="cardsContainer"></div>
+  </div>
 
-    <script>
-        // Gọi hàm đổi UI ngay khi tải trang
-        window.onload = function () { onModeChange(); };
+</div>
 
-        function onModeChange() {
-            const mode = document.getElementById('mode').value;
-            const keyGroup = document.getElementById('keyGroup');
-            const keyLabel = document.getElementById('keyLabel');
-            const keyHint = document.getElementById('keyHint');
+<script>
+/* =========================================================
+   UTILS
+   ========================================================= */
+const Utils = {
+  isHex(s) {
+    return /^[0-9A-Fa-f]+$/.test(s);
+  },
 
-            if (mode === '1') {
-                keyGroup.style.display = 'none';
-            } else if (mode === '2') {
-                keyGroup.style.display = 'block';
-                keyLabel.textContent = 'Key Passphrase (Dùng đệm PKCS7)';
-                keyHint.textContent = 'Chuẩn y hệt it-tools.tech. Nếu key bị bọc Base64/Hex, tool sẽ tự gỡ.';
-            } else if (mode === '3') {
-                keyGroup.style.display = 'block';
-                keyLabel.textContent = 'Key Passphrase (Dùng đệm Zero Padding)';
-                keyHint.textContent = 'Dành cho dạng Hex dị. Tự sinh EvpKDF MD5.';
+  isBase64(s) {
+    if (s.length % 4 !== 0 || /[^A-Za-z0-9+/=]/.test(s)) return false;
+    try { return btoa(atob(s)) === s; } catch { return false; }
+  },
+
+  autoDecodeKey(rawKey) {
+    if (!rawKey) return rawKey;
+    try {
+      if (this.isHex(rawKey)) {
+        const words = CryptoJS.enc.Hex.parse(rawKey);
+        const t = CryptoJS.enc.Utf8.stringify(words);
+        if (t && words.sigBytes > 0) return t;
+      }
+      if (this.isBase64(rawKey)) {
+        const words = CryptoJS.enc.Base64.parse(rawKey);
+        const t = CryptoJS.enc.Utf8.stringify(words);
+        if (t && words.sigBytes > 0) return t;
+      }
+    } catch (e) { }
+    return rawKey;
+  }
+};
+
+/* =========================================================
+   DETECTOR
+   ========================================================= */
+const Detector = {
+  detectFormat(raw) {
+    if (!raw) return [];
+    const results = [];
+
+    const hexValid = Utils.isHex(raw);
+    if (hexValid) {
+      results.push({ format: 'hex', confidence: (raw.length % 2 === 0) ? 'high' : 'medium' });
+    }
+
+    if (Utils.isBase64(raw)) {
+      results.push({ format: 'base64', confidence: hexValid ? 'medium' : 'high' });
+    }
+
+    if (/^[A-Za-z0-9\-_]+$/.test(raw) && raw.length >= 4) {
+      try {
+        let b64 = raw.replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4 !== 0) b64 += '=';
+        atob(b64);
+        if (!results.some(r => r.format === 'base64')) {
+          results.push({ format: 'base64url', confidence: 'medium' });
+        }
+      } catch (e) { }
+    }
+
+    return results;
+  }
+};
+
+/* =========================================================
+   DECODER
+   ========================================================= */
+const Decoder = {
+  decodeHex(raw) {
+    try {
+      const words = CryptoJS.enc.Hex.parse(raw);
+      const text  = CryptoJS.enc.Utf8.stringify(words);
+      return { success: words.sigBytes > 0 && !!text, resultText: text, method: 'Hex decode' };
+    } catch (e) { return { success: false }; }
+  },
+
+  decodeBase64(raw) {
+    try {
+      const words = CryptoJS.enc.Base64.parse(raw);
+      const text  = CryptoJS.enc.Utf8.stringify(words);
+      return { success: words.sigBytes > 0 && !!text, resultText: text, method: 'Base64 decode' };
+    } catch (e) { return { success: false }; }
+  },
+
+  decodeBase64Url(raw) {
+    try {
+      let b64 = raw.replace(/-/g, '+').replace(/_/g, '/');
+      while (b64.length % 4 !== 0) b64 += '=';
+      const words = CryptoJS.enc.Base64.parse(b64);
+      const text  = CryptoJS.enc.Utf8.stringify(words);
+      return { success: words.sigBytes > 0 && !!text, resultText: text, method: 'Base64URL decode' };
+    } catch (e) { return { success: false }; }
+  },
+
+  decodeURL(raw) {
+    try {
+      const safe = raw.replace(/%(?![0-9a-fA-F]{2})/g, '%25');
+      const text = decodeURIComponent(safe);
+      return { success: text !== raw, resultText: text, method: 'URL decode' };
+    } catch (e) { return { success: false }; }
+  },
+
+  decodeROT(raw) {
+    const results = [];
+    for (let shift = 1; shift <= 25; shift++) {
+      let out = '';
+      for (let i = 0; i < raw.length; i++) {
+        const c = raw[i];
+        if (/[a-zA-Z]/.test(c)) {
+          const base = c >= 'a' ? 97 : 65;
+          out += String.fromCharCode(((c.charCodeAt(0) - base + shift) % 26) + base);
+        } else {
+          out += c;
+        }
+      }
+      results.push({ success: true, resultText: out, method: 'ROT' + shift });
+    }
+    return results;
+  },
+
+  runNoKey(raw, detected) {
+    const results = [];
+
+    for (const d of detected) {
+      if (d.format === 'hex')       results.push(this.decodeHex(raw));
+      if (d.format === 'base64')    results.push(this.decodeBase64(raw));
+      if (d.format === 'base64url') results.push(this.decodeBase64Url(raw));
+    }
+
+    const urlResult = this.decodeURL(raw);
+    if (urlResult.success) results.push(urlResult);
+
+    if (/^[a-zA-Z]+$/.test(raw)) {
+      results.push(...this.decodeROT(raw));
+    }
+
+    return results.filter(r => r && r.success);
+  }
+};
+
+/* =========================================================
+   AES ENGINE
+   ========================================================= */
+const AES_ENGINE = {
+  tryAllAES(inputData, rawKey) {
+    if (!rawKey) return [];
+
+    const modes = [
+      { name: 'CBC', value: CryptoJS.mode.CBC },
+      { name: 'ECB', value: CryptoJS.mode.ECB }
+    ];
+    const paddings = [
+      { name: 'PKCS7',       value: CryptoJS.pad.Pkcs7 },
+      { name: 'ZeroPadding', value: CryptoJS.pad.ZeroPadding }
+    ];
+    const keyFormats = [
+      { name: 'passphrase', getKey: () => rawKey },
+      { name: 'utf8',       getKey: () => CryptoJS.enc.Utf8.parse(rawKey) }
+    ];
+    if (Utils.isHex(rawKey) && [32, 48, 64].includes(rawKey.length)) {
+      keyFormats.push({ name: 'hex', getKey: () => CryptoJS.enc.Hex.parse(rawKey) });
+    }
+
+    const results = [];
+
+    for (const kf of keyFormats) {
+      for (const m of modes) {
+        for (const p of paddings) {
+          try {
+            // SỬA FIX CHÍ MẠNG: Để thô chuỗi / WordArray và để CryptoJS tự xử lý khởi tạo CipherParams
+            const decrypted = CryptoJS.AES.decrypt(
+              inputData,
+              kf.getKey(),
+              { mode: m.value, padding: p.value }
+            );
+
+            let text = '';
+            if (p.name === 'ZeroPadding') {
+              const latin = decrypted.toString(CryptoJS.enc.Latin1);
+              const clean = latin.replace(/\x00+$/, '');
+              text = CryptoJS.enc.Utf8.stringify(CryptoJS.enc.Latin1.parse(clean));
             } else {
-                keyGroup.style.display = 'block';
-                keyLabel.textContent = 'Key Passphrase / Raw Key (AES-256-CBC)';
-                keyHint.textContent = 'Chấp nhận ĐỂ TRỐNG nếu mã hóa OpenSSL bằng mật khẩu rỗng. Tự bốc Salt trong Cipher để sinh Key/IV.';
+              text = decrypted.toString(CryptoJS.enc.Utf8);
             }
+
+            results.push({
+              success:    decrypted.sigBytes > 0 && !!text,
+              resultText: text,
+              method:     `AES-${m.name}`,
+              metadata:   `Padding: ${p.name}, Key: ${kf.name}`
+            });
+          } catch (e) {
+            results.push({ success: false });
+          }
         }
+      }
+    }
 
-        function isHex(s) { return /^[0-9A-Fa-f]+$/i.test(s); }
+    return results;
+  }
+};
 
-        function isBase64(s) {
-            if (s.length % 4 !== 0 || /[^A-Za-z0-9+/=]/.test(s)) return false;
-            try { return btoa(atob(s)) === s; } catch (err) { return false; }
-        }
+/* =========================================================
+   RESULT RANKER
+   ========================================================= */
+const ResultRanker = {
+  getPrintableRatio(str) {
+    if (!str) return 0;
+    let count = 0;
+    for (let i = 0; i < str.length; i++) {
+      const c = str.charCodeAt(i);
+      if ((c >= 32 && c <= 126) || c === 9 || c === 10 || c === 13 || c > 127) count++;
+    }
+    return count / str.length;
+  },
 
-        function autoDecodeKey(rawKey) {
-            if (!rawKey) return rawKey;
-            try {
-                if (isHex(rawKey)) {
-                    const hexDecoded = CryptoJS.enc.Hex.parse(rawKey).toString(CryptoJS.enc.Utf8);
-                    if (hexDecoded) return hexDecoded;
-                }
-                if (isBase64(rawKey)) {
-                    const b64Decoded = CryptoJS.enc.Base64.parse(rawKey).toString(CryptoJS.enc.Utf8);
-                    if (b64Decoded) return b64Decoded;
-                }
-            } catch (e) { }
-            return rawKey;
-        }
+  // TÍNH TOÁN THÊM TRỌNG SỐ ĐỂ ĐẨY ROT ĐÚNG LÊN ĐẦU (Sửa lỗi TC-006)
+  getLanguageScore(str) {
+    if (!str) return 0;
+    // Điểm thưởng nếu chuỗi chứa các cụm từ/từ vựng có nghĩa cơ bản trong lập trình hoặc tiếng Anh/Việt thông dụng
+    const patterns = /[aeiouy ]/i; 
+    let matches = 0;
+    for(let i=0; i<str.length; i++) {
+      if(patterns.test(str[i])) matches++;
+    }
+    return (matches / str.length) * 15; 
+  },
 
-        function showResult(text, isErr) {
-            const wrap = document.getElementById('resultWrap');
-            const badge = document.getElementById('badge');
-            const box = document.getElementById('resultOutput');
-            wrap.style.display = 'block';
-            badge.innerHTML = isErr
-                ? '<span class="badge badge-err">Thất bại</span>'
-                : '<span class="badge badge-ok">Thành công</span>';
-            box.value = text;
-        }
+  isJSON(str) {
+    if (!str || str.length < 2) return false;
+    try {
+      const p = JSON.parse(str);
+      return typeof p === 'object' && p !== null;
+    } catch (e) { return false; }
+  },
 
-        function giaiMa() {
-            const mode = document.getElementById('mode').value;
-            const rawInput = document.getElementById('inputData').value.trim().replace(/\s+/g, '');
-            const rawKey = document.getElementById('keyInput').value.trim();
+  rankResults(arr) {
+    const valid = arr.filter(r => r && r.success && r.resultText && r.resultText.trim().length > 0);
 
-            if (!rawInput) { showResult('[!] Vui lòng nhập dữ liệu lối vào.', true); return; }
+    const scored = valid.map(item => {
+      const text          = item.resultText;
+      const printable     = this.getPrintableRatio(text);
+      const validJSON     = this.isJSON(text);
 
-            try {
-                // DẠNG 1: HEX THUẦN
-                if (mode === '1') {
-                    if (!isHex(rawInput)) throw new Error('Không phải chuỗi hex hợp lệ.');
-                    const text = CryptoJS.enc.Hex.parse(rawInput).toString(CryptoJS.enc.Utf8);
-                    if (!text) throw new Error('Không dịch được sang UTF-8 — có thể không phải văn bản.');
-                    showResult(text, false);
-                    return;
-                }
+      let score = printable * 100;
+      if (validJSON) score += 200;
+      
+      // Thêm điểm thưởng ngôn ngữ để phân tách các kết quả ROT rác
+      score += this.getLanguageScore(text);
 
-                // KIỂM TRA KEY (Chỉ chặn đối với dạng 2 và dạng 3, dạng 4 cho phép trống)
-                if (mode !== '4' && !rawKey) {
-                    showResult('[!] Vui lòng nhập Key.', true);
-                    return;
-                }
+      let confidence = 'thấp';
+      if (validJSON || (printable > 0.95 && score > 90)) confidence = 'cao';
+      else if (printable >= 0.6) confidence = 'trung bình';
 
-                const finalKey = autoDecodeKey(rawKey);
+      return { ...item, score, printableRatio: printable, confidence };
+    });
 
-                let processInput = rawInput;
-                if (isHex(rawInput)) {
-                    processInput = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Hex.parse(rawInput));
-                }
+    const filtered = scored.filter(r => r.printableRatio >= 0.6);
+    filtered.sort((a, b) => b.score - a.score);
 
-                // XỬ LÝ CÁC DẠNG GIẢI MÃ CÓ KEY
-                let decrypted;
-                if (mode === '2') {
-                    decrypted = CryptoJS.AES.decrypt(processInput, finalKey);
-                } else if (mode === '3') {
-                    decrypted = CryptoJS.AES.decrypt(processInput, finalKey, {
-                        padding: CryptoJS.pad.ZeroPadding
-                    });
-                } else if (mode === '4') {
-                    // Xử lý Dạng 4: Chấp nhận key trống ""
-                    let keyFormat = finalKey ? finalKey : "";
+    const seen = new Set();
+    const deduped = [];
+    for (const r of filtered) {
+      const key = r.resultText.trim();
+      if (!seen.has(key)) { seen.add(key); deduped.push(r); }
+    }
 
-                    // Nếu người dùng nhập Hex Key thô dài 64 ký tự (256-bit) thay vì passphrase
-                    if (isHex(keyFormat) && keyFormat.length === 64) {
-                        keyFormat = CryptoJS.enc.Hex.parse(keyFormat);
-                    }
+    return deduped.slice(0, 10);
+  }
+};
 
-                    decrypted = CryptoJS.AES.decrypt(processInput, keyFormat, {
-                        mode: CryptoJS.mode.CBC,
-                        padding: CryptoJS.pad.Pkcs7
-                    });
-                }
+/* =========================================================
+   UI RENDERER
+   ========================================================= */
+const UI = {
+  escapeHtml(str) {
+    return str
+      .replace(/&/g,  '&amp;')
+      .replace(/</g,  '&lt;')
+      .replace(/>/g,  '&gt;')
+      .replace(/"/g,  '&quot;')
+      .replace(/'/g,  '&#039;');
+  },
 
-                const text = decrypted.toString(CryptoJS.enc.Utf8);
-                if (!text) {
-                    let errMsg = 'Sai Key hoặc sai định dạng cấu trúc.';
-                    if (finalKey && finalKey !== rawKey) errMsg += ` (Tool đã thử dịch Key ngầm thành: "${finalKey}" nhưng vẫn tạch)`;
-                    throw new Error(errMsg);
-                }
+  renderCards(ranked) {
+    const container = document.getElementById('cardsContainer');
+    const wrap      = document.getElementById('resultWrap');
+    const title     = document.getElementById('resultTitle');
+    container.innerHTML = '';
+    wrap.style.display  = 'block';
 
-                showResult(text, false);
+    if (ranked.length === 0) {
+      title.innerHTML = 'Kết quả';
+      container.innerHTML = `
+        <div class="result-card card-error">
+          <div class="card-header">
+            <div class="card-meta">
+              <span class="card-method" style="color:var(--badge-low)">Không tìm được kết quả</span>
+            </div>
+            <span class="badge badge-low">Lỗi</span>
+          </div>
+          <div class="output-text">Không tìm được kết quả khả dĩ — thử kiểm tra lại key hoặc định dạng input.</div>
+        </div>`;
+      return;
+    }
 
-            } catch (e) {
-                showResult('[!] Lỗi: ' + e.message, true);
-            }
-        }
-    </script>
+    const n = ranked.length;
+    title.innerHTML = `Tìm thấy <span class="result-count">${n}</span> kết quả khả dĩ`;
 
+    ranked.forEach((item, idx) => {
+      const badgeClass = item.confidence === 'cao'
+        ? 'badge-high'
+        : item.confidence === 'trung bình'
+          ? 'badge-medium'
+          : 'badge-low';
+
+      const card = document.createElement('div');
+      card.className = 'result-card';
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-meta">
+            <span class="card-method">${this.escapeHtml(item.method)}</span>
+            ${item.metadata ? `<span class="card-detail">${this.escapeHtml(item.metadata)}</span>` : ''}
+          </div>
+          <span class="badge ${badgeClass}">${item.confidence}</span>
+        </div>
+        <div class="output-text" id="out_${idx}">${this.escapeHtml(item.resultText)}</div>
+        <button class="btn-copy" onclick="App.copyText(${idx}, this)">Sao chép</button>`;
+      container.appendChild(card);
+    });
+  },
+
+  hide() {
+    document.getElementById('resultWrap').style.display = 'none';
+    document.getElementById('cardsContainer').innerHTML = '';
+  },
+
+  setLoading(on) {
+    const btn     = document.getElementById('btnGiaiMa');
+    const spinner = document.getElementById('spinner');
+    const label   = document.getElementById('btnLabel');
+    btn.disabled          = on;
+    spinner.style.display = on ? 'inline-block' : 'none';
+    label.textContent     = on ? 'Đang xử lý…' : 'Giải mã';
+  }
+};
+
+/* =========================================================
+   CORE
+   ========================================================= */
+const Core = {
+  process(rawInput, rawKey) {
+    const raw = rawInput.trim().replace(/\s+/g, '');
+    const key = rawKey.trim();
+
+    if (!raw) return [];
+
+    const detected   = Detector.detectFormat(raw);
+    let   rawResults = [];
+
+    if (!key) {
+      rawResults = Decoder.runNoKey(raw, detected);
+    } else {
+      const finalKey = Utils.autoDecodeKey(key);
+
+      // Thử giải với chuỗi gốc (Base64 string hoặc raw text)
+      rawResults = AES_ENGINE.tryAllAES(raw, finalKey);
+
+      // Nếu input là hex hợp lệ, thử thêm 2 dạng:
+      // 1) WordArray (cho raw key CBC/ECB)
+      // 2) Re-encode hex→Base64 (cho passphrase mode với OpenSSL Salted__ header)
+      if (Utils.isHex(raw)) {
+        const hexWA = CryptoJS.enc.Hex.parse(raw);
+        rawResults.push(...AES_ENGINE.tryAllAES(hexWA, finalKey));
+        const reB64 = CryptoJS.enc.Base64.stringify(hexWA);
+        rawResults.push(...AES_ENGINE.tryAllAES(reB64, finalKey));
+      }
+    }
+
+    return ResultRanker.rankResults(rawResults);
+  }
+};
+
+/* =========================================================
+   APP
+   ========================================================= */
+const App = {
+  toggleAdvanced() {
+    const panel = document.getElementById('advancedPanel');
+    const toggle = document.getElementById('advToggle');
+    const isOpen = panel.style.display === 'block';
+    panel.style.display = isOpen ? 'none' : 'block';
+    toggle.classList.toggle('open', !isOpen);
+  },
+
+  onInputChange() {
+    const raw = document.getElementById('inputData').value.trim();
+    if (!raw) UI.hide();
+  },
+
+  copyText(idx, btn) {
+    const text = document.getElementById(`out_${idx}`).innerText;
+    if (!navigator.clipboard || !navigator.clipboard.writeText) return;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Đã chép! ✓';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Sao chép';
+        btn.classList.remove('copied');
+      }, 1400);
+    });
+  },
+
+  giaiMa() {
+    const raw = document.getElementById('inputData').value;
+    const key = document.getElementById('keyInput').value;
+
+    if (!raw.trim()) {
+      alert('Vui lòng nhập dữ liệu đầu vào!');
+      return;
+    }
+
+    UI.setLoading(true);
+
+    setTimeout(() => {
+      try {
+        const ranked = Core.process(raw, key);
+        UI.renderCards(ranked);
+      } catch (err) {
+        console.error('[DoKiepTran] Lỗi không mong đợi:', err);
+        UI.renderCards([]);
+      } finally {
+        UI.setLoading(false);
+      }
+    }, 20);
+  }
+};
+
+document.getElementById('keyInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') App.giaiMa();
+});
+</script>
 </body>
-
 </html>
