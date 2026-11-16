@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hệ mật Vigenère</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <main class="container">
+    <h1 class="title">Hệ mật Vigenère</h1>
+
+    <!-- Dòng 1: Input -->
+    <div class="row">
+      <label for="textInput" class="label">Văn bản</label>
+      <textarea
+        id="textInput"
+        class="control mono"
+        rows="4"
+        placeholder="Nhập văn bản cần mã hóa hoặc giải mã"
+        spellcheck="false"
+      >CRYPTOGRAPHY</textarea>
+    </div>
+
+    <!-- Dòng 2: Key + 2 nút bấm -->
+    <div class="row">
+      <label for="keyInput" class="label">Từ khóa</label>
+      <div class="key-bar">
+        <input
+          id="keyInput"
+          type="text"
+          class="control mono"
+          value="BEAUFORT"
+          placeholder="Nhập từ khóa A–Z"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button id="btnEncrypt" type="button" class="btn btn--primary">Mã hóa</button>
+        <button id="btnDecrypt" type="button" class="btn btn--secondary">Giải mã</button>
+      </div>
+      <p id="keyHint" class="hint">Chỉ giữ lại chữ cái A–Z.</p>
+    </div>
+
+    <!-- Dòng cuối: Output -->
+    <div class="row">
+      <label for="outputBox" class="label">Kết quả</label>
+      <textarea
+        id="outputBox"
+        class="control control--readonly mono"
+        rows="4"
+        readonly
+        aria-live="polite"
+      ></textarea>
+    </div>
+  </main>
+</body>
+</html>
