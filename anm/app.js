@@ -11,7 +11,8 @@
     keyHint: $('keyHint'),
     btnEncrypt: $('btnEncrypt'),
     btnDecrypt: $('btnDecrypt'),
-    outputBox: $('outputBox')
+    outputBox: $('outputBox'),
+    cipherTable: $('cipherTable')
   };
 
   const stripDiacritics = (text) =>
@@ -32,25 +33,108 @@
     const prepared = stripDiacritics(text || '');
     let keyIdx = 0;
     let output = '';
+    const steps = [];
 
     for (const ch of prepared) {
       const upper = ch.toUpperCase();
       if (upper >= 'A' && upper <= 'Z') {
-        const p = upper.charCodeAt(0) - 65;
-        const k = key[keyIdx % key.length].charCodeAt(0) - 65;
-        const c = mode === 'encrypt' ? (p + k) % 26 : (p - k + 26) % 26;
-        output += ALPHABET[c];
+        const inCode = upper.charCodeAt(0) - 65;
+        const keyChar = key[keyIdx % key.length];
+        const k = keyChar.charCodeAt(0) - 65;
+        const outCode = mode === 'encrypt' ? (inCode + k) % 26 : (inCode - k + 26) % 26;
+        const outChar = ALPHABET[outCode];
+        output += outChar;
+
+        const isEncrypt = mode === 'encrypt';
+        steps.push({
+          isLetter: true,
+          pChar: isEncrypt ? upper : outChar,
+          pNum: isEncrypt ? inCode : outCode,
+          kChar: keyChar,
+          kNum: k,
+          cChar: isEncrypt ? outChar : upper,
+          cNum: isEncrypt ? outCode : inCode
+        });
         keyIdx++;
       } else {
         output += ch;
+        steps.push({
+          isLetter: false,
+          displayChar: ch === ' ' ? '·' : ch
+        });
       }
     }
 
-    return { output, isFallbackKey: cleanKey.length === 0 };
+    return { output, isFallbackKey: cleanKey.length === 0, steps };
+  };
+
+  const createCell = (tag, className, text) => {
+    const cell = document.createElement(tag);
+    if (className) cell.className = className;
+    if (text !== undefined) cell.textContent = text;
+    return cell;
+  };
+
+  const createStepCell = (charText, numText, extraClass) => {
+    const td = document.createElement('td');
+    if (extraClass) td.className = extraClass;
+
+    const charSpan = document.createElement('span');
+    charSpan.className = 'cell-char';
+    charSpan.textContent = charText;
+    td.appendChild(charSpan);
+
+    if (numText !== null && numText !== undefined) {
+      const numSpan = document.createElement('span');
+      numSpan.className = 'cell-num';
+      numSpan.textContent = String(numText);
+      td.appendChild(numSpan);
+    }
+
+    return td;
+  };
+
+  const renderTable = (steps) => {
+    const table = el.cipherTable;
+    table.replaceChildren();
+
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    headRow.appendChild(createCell('th', 'row-head', 'Chỉ số'));
+
+    const tbody = document.createElement('tbody');
+    const pRow = document.createElement('tr');
+    pRow.appendChild(createCell('th', 'row-head', 'Bản rõ P'));
+
+    const kRow = document.createElement('tr');
+    kRow.appendChild(createCell('th', 'row-head', 'Từ khóa K'));
+
+    const cRow = document.createElement('tr');
+    cRow.appendChild(createCell('th', 'row-head', 'Bản mã C'));
+
+    steps.forEach((step, idx) => {
+      const activeClass = idx === 0 ? 'cell-active' : '';
+      headRow.appendChild(createCell('th', activeClass, String(idx)));
+
+      if (step.isLetter) {
+        pRow.appendChild(createStepCell(step.pChar, step.pNum, activeClass));
+        kRow.appendChild(createStepCell(step.kChar, step.kNum, activeClass));
+        cRow.appendChild(createStepCell(step.cChar, step.cNum, activeClass));
+      } else {
+        const mutedClass = activeClass ? `${activeClass} cell-muted` : 'cell-muted';
+        pRow.appendChild(createCell('td', mutedClass, step.displayChar));
+        kRow.appendChild(createCell('td', mutedClass, '—'));
+        cRow.appendChild(createCell('td', mutedClass, step.displayChar));
+      }
+    });
+
+    thead.appendChild(headRow);
+    tbody.append(pRow, kRow, cRow);
+    table.append(thead, tbody);
   };
 
   const run = (mode) => {
-    const { output, isFallbackKey } = transformVigenere(
+    const { output, isFallbackKey, steps } = transformVigenere(
       el.textInput.value,
       el.keyInput.value,
       mode
@@ -61,6 +145,7 @@
       : 'Chỉ giữ lại chữ cái A–Z.';
 
     el.outputBox.value = output;
+    renderTable(steps);
   };
 
   el.keyInput.addEventListener('input', (e) => {

@@ -171,6 +171,103 @@ input.control {
   background-color: var(--surface-secondary-hover);
 }
 
+.table-wrap {
+  width: max-content;
+  min-width: 100%;
+  max-width: calc(100vw - 40px);
+  align-self: center;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  background-color: var(--bg);
+}
+
+.cipher-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.cipher-table th,
+.cipher-table td {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  vertical-align: middle;
+  min-width: 44px;
+  padding: 6px 8px;
+}
+
+.cipher-table tr:last-child th,
+.cipher-table tr:last-child td {
+  border-bottom: none;
+}
+
+.cipher-table th:last-child,
+.cipher-table td:last-child {
+  border-right: none;
+}
+
+.cipher-table thead th {
+  background-color: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px;
+}
+
+.cipher-table .row-head {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: var(--bg);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: left;
+  white-space: nowrap;
+  padding: 8px 14px;
+}
+
+.cipher-table thead .row-head {
+  background-color: var(--surface-secondary);
+  color: var(--text-secondary);
+}
+
+.cipher-table .cell-char {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+
+.cipher-table .cell-num {
+  display: block;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.cipher-table .cell-muted {
+  background-color: var(--surface-secondary);
+  color: var(--text-secondary);
+}
+
+.cipher-table .cell-active {
+  background-color: rgba(0, 113, 227, 0.08);
+}
+
+.cipher-table thead th.cell-active,
+.cipher-table .cell-active .cell-char,
+.cipher-table .cell-active .cell-num {
+  color: var(--accent);
+}
+
 @media (max-width: 480px) {
   .container {
     padding: 40px 16px;
